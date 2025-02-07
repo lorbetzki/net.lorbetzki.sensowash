@@ -1,0 +1,12 @@
+{
+    "id": "{ADBCA3E0-4DFF-A322-82F1-1EB7247EC939}",
+    "name": "Sensowash",
+    "author": "Kristian Lorbetzki",
+    "url": "https://github.com/lorbetzki/net.lorbetzki.sensowash.git",
+    "compatibility": {
+        "version": "7.2"
+    },
+    "version": "1.0",
+    "build": 0,
+    "date": 20250207
+}

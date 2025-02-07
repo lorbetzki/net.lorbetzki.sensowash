@@ -1,0 +1,30 @@
+{
+    "translations": {
+        "de": {
+            "on": "ein",
+            "off": "aus",
+            "automatic": "automatik",
+            "level 1": "Stufe 1",
+            "level 2": "Stufe 2",
+            "level 3": "Stufe 3",
+            "yes": "ja",
+            "no": "no",
+            "Seat heater": "Sitzheizung",
+            "Night Light": "Nachtlicht",
+            "Confirmation Sound": "Bestätigungston",
+            "Manual cleaning": "manuelle Reinigung",
+            "Comfort mode": "Komfortmodus",
+            "IP Address": "IP Adresse",
+            "BLE rssi": "BLE rssi",
+            "Connected":"Verbunden",
+            "last message":"letzte Nachricht",
+            "Connect to WC": "Verbinden",
+            "Connect":"verbunden",
+            "Restart device":"BLE neustarten",
+            "Get config":"hole Konfiguration",
+            "Restart": "neustart",
+            "Topic of the device":"Topic vom Gerät",
+            "Please insert Topic":"Bitte Topic eintragen"
+        }
+    }
+}

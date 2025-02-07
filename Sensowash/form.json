@@ -1,0 +1,36 @@
+{
+    "elements": [
+        {
+            "type": "ValidationTextBox",
+            "name": "Topic",
+            "caption": "Topic of the device"
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "name": "Connect",
+            "label": "Connect to WC",
+            "onClick": "IPS_RequestAction($id, 'connect', '');"
+        },
+        {
+            "type": "Button",
+            "name": "Restart",
+            "label": "Restart device",
+            "onClick": "IPS_RequestAction($id, 'restart', '');"
+        },
+        {
+            "type": "Button",
+            "name": "Get config",
+            "label": "Get config",
+            "onClick": "IPS_RequestAction($id, 'readconfig', '');"
+        }
+    ],
+    "status": [
+        {
+            "code": 201,
+            "icon": "error",
+            "caption": "Please insert Topic"
+        }
+    ]
+}

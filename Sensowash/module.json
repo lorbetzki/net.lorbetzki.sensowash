@@ -1,0 +1,12 @@
+{
+    "id": "{9D58A402-A925-A6E3-427B-A3A3768E7602}",
+    "name": "Sensowash",
+    "type": 3,
+    "vendor": "Duravit",
+    "aliases": ["Starck", "Sensowash", "Duravit"], 
+    "parentRequirements": ["{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}"],
+    "childRequirements": [],
+    "implemented": ["{7F7632D9-FA40-4F38-8DEA-C83CD4325A32}"],
+    "prefix": "SENSOWASH",
+    "url": "https://github.com/lorbetzki/net.lorbetzki.sensowash.git"
+}
