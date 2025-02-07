@@ -44,7 +44,6 @@ declare(strict_types=1);
 
 			//--- Register Timer
 			$this->RegisterTimer("DisableConnection", 0, 'SENSOWASH_Logoff($_IPS[\'TARGET\']);');
-			$this->RegisterTimer("ReadConfig", 0, 'SENSOWASH_readconfig($_IPS[\'TARGET\']);');
 
 		}
 
@@ -490,7 +489,7 @@ declare(strict_types=1);
 			}
 		}
 
-		private function Logoff()
+		public function Logoff()
 		{
 			$this->SetValue('connected',false);
 			$this->SendDebug(__FUNCTION__, "logging off...", 0);
