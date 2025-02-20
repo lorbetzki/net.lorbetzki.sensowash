@@ -18,6 +18,17 @@ declare(strict_types=1);
 		const HEX_SOUNDON 		= "4001";
 		const HEX_SOUNDOFF 		= "4000";
 
+		const HEX_HOLIDAYMODE	= "6200";
+		const HEX_HARDNESS_1 	= '6700'; 
+		const HEX_HARDNESS_2 	= '6701'; 
+		const HEX_HARDNESS_3 	= '6702'; 
+		
+		const HEX_SELFCLEAN		= '0363'; 
+		const HEX_READHARDNESS	= '0368'; 
+		const HEX_HARDNESSPARA	= '0467';
+		const HEX_READDECALDAY	= '0369'; 
+		const HEX_DECALDAYPARA	= '056600';
+
 		const HEX_CLEANON 		= "0361";
 		const HEX_CLEANOFF 		= "0301";
 		const HEX_GETDATA 		= "0350";
@@ -44,7 +55,12 @@ declare(strict_types=1);
 
 			//--- Register Timer
 			$this->RegisterTimer("DisableConnection", 0, 'SENSOWASH_Logoff($_IPS[\'TARGET\']);');
-
+			// self cleaning is done after 90 sek.
+			$this->RegisterTimer("StopSelfCleaning", 0, 'SENSOWASH_StopSelfCleaning($_IPS[\'TARGET\']);');
+			// manual cleaning switch go to stop after 2 min
+			$this->RegisterTimer("StopManualCleaning", 0, 'SENSOWASH_StopManualCleaning($_IPS[\'TARGET\']);');
+			// decalcification is finished after 37 min. 
+			$this->RegisterTimer("StopDecal", 0, 'SENSOWASH_StopDecal($_IPS[\'TARGET\']);');
 		}
 
 		public function Destroy()
@@ -216,11 +232,26 @@ declare(strict_types=1);
 
 									$HEX_BEGIN = substr($value['notify'], 0, 6);
 									// if HEX begin with 550506 we receive data from the toilet
-									if ($HEX_BEGIN === self::HEX_START.self::HEX_READPARAM)
+									if ((substr($value['notify'], 0, 6)) === self::HEX_START.self::HEX_READPARAM)
 									{
 										$this->GetConfig($value['notify']);
 										$this->SendDebug(__FUNCTION__, "Get Parameter: ". $value['notify'], 0);
+									}
 
+									// if HEX begin with 5505056600 we receive data from the toilet
+									$HEX_BEGIN = substr($value['notify'], 0, 10);
+									if ( $HEX_BEGIN === self::HEX_START.self::HEX_DECALDAYPARA)
+									{
+										$this->GetDecalDay($value['notify']);
+										$this->SendDebug(__FUNCTION__, "Get Decalday: ". $HEX_BEGIN, 0);
+									}
+
+									// if HEX begin with 55050467 we receive water hardness
+									$HEX_BEGIN = substr($value['notify'], 0, 8);
+									if ( $HEX_BEGIN === self::HEX_START.self::HEX_HARDNESSPARA)
+									{
+										$this->GetHardness($value['notify']);
+										$this->SendDebug(__FUNCTION__, "Get Water Hardness: ". $HEX_BEGIN, 0);
 									}
 								break;
 							}
@@ -280,11 +311,26 @@ declare(strict_types=1);
 				IPS_SetVariableProfileAssociation("SENSOWASH.NightLight", 1, $this->Translate('on'), "", 0x00FF00);
 				IPS_SetVariableProfileAssociation("SENSOWASH.NightLight", 2, $this->Translate('automatic'), "", 0x007FFF);
 			}
+			if (!IPS_VariableProfileExists('SENSOWASH.Hardness')) {
+				IPS_CreateVariableProfile('SENSOWASH.Hardness', VARIABLETYPE_INTEGER);
+				IPS_SetVariableProfileIcon('SENSOWASH.Hardness', '');
+				IPS_SetVariableProfileValues("SENSOWASH.Hardness", 0, 2, 1);
+				IPS_SetVariableProfileText("SENSOWASH.Hardness", "", "");
+				IPS_SetVariableProfileAssociation("SENSOWASH.Hardness", 0, $this->Translate('soft'), "", 0xFFFFFF);
+				IPS_SetVariableProfileAssociation("SENSOWASH.Hardness", 1, $this->Translate('middle'), "", 0x00FF00);
+				IPS_SetVariableProfileAssociation("SENSOWASH.Hardness", 2, $this->Translate('hard'), "", 0x007FFF);
+			}
 			if (!IPS_VariableProfileExists('SENSOWASH.RSSI')) {
 				IPS_CreateVariableProfile('SENSOWASH.RSSI', VARIABLETYPE_INTEGER);
 				IPS_SetVariableProfileIcon('SENSOWASH.RSSI', '');
 				IPS_SetVariableProfileValues("SENSOWASH.RSSI", 0, 0, 1);
 				IPS_SetVariableProfileText("SENSOWASH.RSSI", "", " dBm");
+			}
+			if (!IPS_VariableProfileExists('SENSOWASH.DECALDAY')) {
+				IPS_CreateVariableProfile('SENSOWASH.DECALDAY', VARIABLETYPE_INTEGER);
+				IPS_SetVariableProfileIcon('SENSOWASH.DECALDAY', '');
+				IPS_SetVariableProfileValues("SENSOWASH.DECALDAY", 0, 0, 1);
+				IPS_SetVariableProfileText("SENSOWASH.DECALDAY", "", $this->Translate(' Days'));
 			}
 			if (!IPS_VariableProfileExists('SENSOWASH.YESNO')) {
 				IPS_CreateVariableProfile('SENSOWASH.YESNO', VARIABLETYPE_BOOLEAN);
@@ -312,6 +358,10 @@ declare(strict_types=1);
 			$this->EnableAction("ManualCleaning");
 			$this->SendDebug(__FUNCTION__,"Create Variable with IDENT ManualCleaning", 0);
 
+			$this->MaintainVariable('HolidayMode', $this->Translate("Holiday Mode"), VARIABLETYPE_BOOLEAN, "~Switch", 3, true);
+			$this->EnableAction("HolidayMode");
+			$this->SendDebug(__FUNCTION__,"Create Variable with IDENT HolidayMode", 0);
+
 			$this->MaintainVariable('ComfortMode', $this->Translate("Comfort mode"), VARIABLETYPE_BOOLEAN, "~Switch", 3, true);
 			$this->EnableAction("ComfortMode");
 			$this->SendDebug(__FUNCTION__,"Create Variable with IDENT ComfortMode", 0);
@@ -321,6 +371,13 @@ declare(strict_types=1);
 
 			$this->MaintainVariable('rssi', $this->Translate("BLE rssi"), VARIABLETYPE_INTEGER, "SENSOWASH.RSSI", 9, true);
 			$this->SendDebug(__FUNCTION__,"Create Variable with IDENT rssi", 0);
+
+			$this->MaintainVariable('Hardness', $this->Translate("Hardness"), VARIABLETYPE_INTEGER, "SENSOWASH.Hardness", 9, true);
+			$this->EnableAction("Hardness");
+			$this->SendDebug(__FUNCTION__,"Create Variable with IDENT hardness", 0);
+						
+			$this->MaintainVariable('decaldays', $this->Translate("Days before decalcification"), VARIABLETYPE_INTEGER, "SENSOWASH.DECALDAY", 10, true);
+			$this->SendDebug(__FUNCTION__,"Create Variable with IDENT decaldays", 0);
 
 			$this->MaintainVariable('connected', $this->Translate("Connected"), VARIABLETYPE_BOOLEAN, "SENSOWASH.YESNO", 0, true);
 			$this->SendDebug(__FUNCTION__,"Create Variable with IDENT rssi", 0);
@@ -338,10 +395,17 @@ declare(strict_types=1);
 		}
 		
 		private function ReadConfig()
-		{
+		{	
 			$this->SendDebug(__FUNCTION__,"reading data", 0);
+			// setting
 			$crc = $this->verifyChecksum(self::HEX_GETDATA,0);
 			$this->sendMQTT("GETDATA", self::HEX_START.self::HEX_GETDATA.$crc);
+			// decalcification days left
+			$crc = $this->verifyChecksum(self::HEX_READDECALDAY,0);
+			$this->sendMQTT("GETDATA", self::HEX_START.self::HEX_READDECALDAY.$crc);
+			// read water hardness settings
+			$crc = $this->verifyChecksum(self::HEX_READHARDNESS,0);
+			$this->sendMQTT("GETDATA", self::HEX_START.self::HEX_READHARDNESS.$crc);
 		}
 
 		private function seatheat(int $val)
@@ -424,6 +488,27 @@ declare(strict_types=1);
 			$this->sendMQTT("SETUP", self::HEX_START.self::HEX_WRITE.$Value.$crc);	
 		}
 
+		private function SetHardness(int $val)
+		{
+			switch($val)
+			{
+				case 0:
+					$Value = self::HEX_HARDNESS_1;
+				break;
+				
+				case 1:
+					$Value = self::HEX_HARDNESS_2;
+				break;
+
+				case 2:
+					$Value = self::HEX_HARDNESS_3;
+				break;
+			}
+			$crc=$this->verifyChecksum($Value,self::HEX_WRITE);
+
+			$this->sendMQTT("SETUP", self::HEX_START.self::HEX_WRITE.$Value.$crc);	
+		}
+
 		private function manualcleaning(bool $val)
 		{
 			switch($val)
@@ -439,6 +524,22 @@ declare(strict_types=1);
 			$crc=$this->verifyChecksum($Value,0);
 
 			$this->sendMQTT("SETUP", self::HEX_START.$Value.$crc);	
+		}
+
+		private function HolidayMode(bool $val)
+		{
+			switch($val)
+			{
+				case 0:
+					$Value = 0;
+				break;
+				
+				case 1:
+					$Value = self::HEX_HOLIDAY;
+					$crc=$this->verifyChecksum($Value,0);
+					$this->sendMQTT("SETUP", self::HEX_START.$Value.$crc);	
+				break;
+			}	
 		}
 
 		private function restart()
@@ -477,6 +578,14 @@ declare(strict_types=1);
 					$this->comfortmode($Value);
 					$this->SetValue($Ident, $Value);
 				break;
+				case "Hardness":
+					$this->SetHardness($Value);
+					$this->SetValue($Ident, $Value);
+				break;
+				case "HolidayMode":
+					$this->HolidayMode($Value);
+					$this->SetValue($Ident, $Value);
+				break;
 				case "connect":
 					$this->connect();
 				break;
@@ -494,7 +603,7 @@ declare(strict_types=1);
 			$this->SetValue('connected',false);
 			$this->SendDebug(__FUNCTION__, "logging off...", 0);
 		}
-		
+
 		private function verifyChecksum(string $hex, int $dec)
 		{
 			$bufLen = strlen($hex);
@@ -505,6 +614,39 @@ declare(strict_types=1);
 			}
 			$result = strtoupper(dechex(($sum_dec % 256)));
 			return str_pad($result,2,"0", STR_PAD_LEFT);
+		}
+		
+		private function GetHardness(string $HEX)
+		{
+			// making an array
+			$HEX = hexdec(substr($HEX, 8,2));
+
+			$this->SendDebug(__FUNCTION__, "Hexdaten: ". $HEX, 0);
+			switch($HEX)
+			{
+				case 00:
+					$Value = 0;
+				break;
+				
+				case 01:
+					$Value = 1;
+				break;
+
+				case 02:
+					$Value = 2;
+				break;
+			}
+			$this->SetValue('Hardness', $Value);
+		}
+
+		private function GetDecalDay(string $Value)
+		{
+			// making an array
+			$HEX = hexdec(substr($Value, 10,2));
+
+			$this->SendDebug(__FUNCTION__, "Hexdaten: ". $HEX, 0);
+			//55 05 05 66 00 7A E5 7A=122 Days
+			$this->SetValue('decaldays', $HEX);
 		}
 
 		private function GetConfig(string $HEX)

@@ -24,7 +24,14 @@
             "Get config":"hole Konfiguration",
             "Restart": "neustart",
             "Topic of the device":"Topic vom Gerät",
-            "Please insert Topic":"Bitte Topic eintragen"
+            "Please insert Topic":"Bitte Topic eintragen",
+            " Days": " Tage",
+            "Days before decalcification": "Tage bis zur Entkalkung",
+            "soft":"weich",
+            "middle":"mittel",
+            "hard":"hart",
+            "Hardness":"eingestellte Wasserhärte",
+            "Holiday Mode":"Ferienmodus"
         }
     }
 }
